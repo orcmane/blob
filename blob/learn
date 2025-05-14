@@ -1,0 +1,30 @@
+if (context.Request.Method == HttpMethods.Post || context.Request.Method == HttpMethods.Put)
+        {
+            if (context.Request.ContentType?.Contains("application/json") == true)
+            {
+                // Enable reading the request body multiple times
+                context.Request.EnableBuffering();
+
+                using var reader = new StreamReader(context.Request.Body, leaveOpen: true);
+                string body = await reader.ReadToEndAsync();
+                context.Request.Body.Position = 0;
+
+                // Parse body to get username
+                var json = System.Text.Json.JsonDocument.Parse(body);
+                if (json.RootElement.TryGetProperty("username", out var usernameElement))
+                {
+                    var usernameInBody = usernameElement.GetString();
+
+                    // Get username from JWT (usually in "sub" or "username" claim)
+                    var usernameFromToken = context.User?.FindFirst("sub")?.Value 
+                                            ?? context.User?.FindFirst("username")?.Value;
+
+                    if (usernameInBody != usernameFromToken)
+                    {
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        await context.Response.WriteAsync("Username in token does not match body.");
+                        return;
+                    }
+                }
+            }
+        }
