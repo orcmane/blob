@@ -28,3 +28,8 @@ if (context.Request.Method == HttpMethods.Post || context.Request.Method == Http
                 }
             }
         }
+
+
+
+pattern = @"^[a-zA-Z0-9_-]+$";
+invalidPattern = @"[\\/:*?""<>|]|, ";
