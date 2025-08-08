@@ -31,5 +31,63 @@ if (context.Request.Method == HttpMethods.Post || context.Request.Method == Http
 
 
 
-pattern = @"^[a-zA-Z0-9_-]+$";
-invalidPattern = @"[\\/:*?""<>|]|, ";
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
+using System;
+
+public static class JwtSecurityConfiguration
+{
+    public static void ConfigureJwtBearer(JwtBearerOptions options, IConfiguration configuration)
+    {
+        options.TokenValidationParameters.RequireSignedTokens = true;
+        options.TokenValidationParameters.RequireExpirationTime = true;
+        options.TokenValidationParameters.ValidateIssuerSigningKey = true;
+
+        // Restrict to your Azure AD tenant
+        options.TokenValidationParameters.ValidIssuers = new[]
+        {
+            $"https://login.microsoftonline.com/{configuration["AzureAd:TenantId"]}/v2.0"
+        };
+
+        // Restrict to your application's audience
+        options.TokenValidationParameters.ValidAudiences = new[]
+        {
+            configuration["AzureAd:ClientId"],
+            $"api://{configuration["AzureAd:ClientId"]}"
+        };
+
+        // Block dangerous JWT headers flagged by Fortify
+        options.TokenValidationParameters.HeaderValidator = (header, _) =>
+        {
+            if (header.ContainsKey("jwk") ||
+                header.ContainsKey("jku") ||
+                header.ContainsKey("x5u") ||
+                header.ContainsKey("x5c"))
+            {
+                throw new SecurityTokenValidationException(
+                    "Token contains potentially unsafe header claims."
+                );
+            }
+
+            return header;
+        };
+    }
+}
+
+public static class ServiceCollectionExtensions
+{
+    public static IServiceCollection AddAuthenticationServices(this IServiceCollection services, IConfiguration configuration)
+    {
+        // Add MS Identity Web API authentication
+        services.AddMicrosoftIdentityWebApiAuthentication(configuration);
+
+        // Enhance security with Fortify-approved validations
+        services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme,
+            options => JwtSecurityConfiguration.ConfigureJwtBearer(options, configuration));
+
+        return services;
+    }
+}
+
