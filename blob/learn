@@ -90,4 +90,18 @@ public static class ServiceCollectionExtensions
         return services;
     }
 }
+ Concurrent Requests
 
+Hi Team,
+
+During the recent pentest, one issue was reported: “Lack of rate limiting.”
+Based on your test results, this issue appeared when the system was tested with 2,000 simultaneous requests.
+
+For context, we had configured the rate-limiting threshold in our application to 2,000 requests.
+In the previous pentest, the test was performed with over 5,000 simultaneous requests, and we received the same issue. After that, we implemented and enforced rate limiting in the code with the threshold set to 2,000 requests.
+
+Since the latest pentest also used exactly 2,000 requests, the test hit the threshold limit itself, which caused the issue to appear again. The system is working as designed, but the test parameters matched the configured threshold.
+
+To properly validate the effectiveness of the rate limiting, we kindly request a retest with more than 2,000 simultaneous requests (e.g., 3,000–5,000 or higher). This will confirm that the rate limiter is functioning correctly beyond the configured limit.
+
+Please let us know if you need any additional details from our side.
